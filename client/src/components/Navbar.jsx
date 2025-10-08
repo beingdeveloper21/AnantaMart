@@ -35,8 +35,7 @@ const Navbar = () => {
         <hr className='w-2/4 border-none h-[1.5px] bg-gray-700 hidden'/>
         </NavLink>
       </ul>
-      <div className='flex items-center gap-6'>
-        <img onClick={()=>setShowSearch(true)}src={assets.search_icon} className='w-5 cursor-pointer' alt=""/>
+      <div className='flex items-center gap-9'>
 
      <div className='group relative'>
         <img onClick={()=>token?null:navigate('/login')} className='w-5 cursor-pointer' src={assets.profile_icon} alt=""/>

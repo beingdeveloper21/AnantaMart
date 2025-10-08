@@ -98,7 +98,12 @@ const Login = () => {
         className="w-full px-3 py-2 border border-gray-800"
       />
       <div className="w-full flex justify-between text-sm mt-[-8px]">
-        <p className="cursor-pointer">Forgot your password?</p>
+       <p
+    className="cursor-pointer text-blue-500"
+    onClick={() => navigate("/forgot-password")}
+  >
+    Forgot your password?
+  </p>
         {currentState === 'Login' ? (
           <p onClick={() => setCurrentState('Sign Up')} className="cursor-pointer">
             Create Account

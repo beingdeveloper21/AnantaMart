@@ -14,7 +14,9 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import SearchBar from './components/SearchBar'
 import PlusSuccess from "./pages/PlusSuccess.jsx";
+import ForgotPassword from "./pages/ForgotPassword";
 import { ToastContainer, toast } from 'react-toastify';
+
   import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
@@ -35,6 +37,7 @@ const App = () => {
       <Route path='/orders' element={<Orders/>}/>
       <Route path='/verify' element={<Verify/>}/>
       <Route path="/plus-success" element={<PlusSuccess />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
       <Footer/>
     </div>

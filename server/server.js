@@ -8,6 +8,7 @@ import userRouter from './routes/userRoute.js';
 import productRouter from './routes/productRoute.js';
 import cartRouter from './routes/cartRoute.js';
 import orderRouter from './routes/orderRoute.js';
+import forgotPasswordRoutes from "./routes/forgotPasswordRoutes.js";
 import customerQueryRouter from './routes/customerQueryRoutes.js';
 import newsletterRoutes from "./routes/newletterRoutes.js";
 import plusRoutes from "./routes/plusRoutes.js"
@@ -31,6 +32,7 @@ app.use('/api/order', orderRouter);
 app.use('/api/customerquery', customerQueryRouter);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/plus", plusRoutes); 
+app.use("/api/user/forgot-password", forgotPasswordRoutes);
 
 
 
