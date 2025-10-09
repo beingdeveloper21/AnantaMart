@@ -13,10 +13,72 @@ const deliveryCharge = 50;
 
 
 // ------------------- Place Order (COD) -------------------
+// export const placeOrder = async (req, res) => {
+//   try {
+//     const userId = req.userId;
+//     const { items, amount, address } = req.body;
+
+//     if (!items || !Array.isArray(items) || items.length === 0)
+//       return res.status(400).json({ success: false, message: "Invalid items array" });
+
+//     const user = await userModel.findById(userId);
+//     if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+//     // Apply Plus Member discount if applicable
+//     let finalAmount = amount;
+//     if (user.plusMember && amount > 999) finalAmount = parseFloat((amount * 0.96).toFixed(2));
+
+//     finalAmount += deliveryCharge;
+
+//     // Save order
+//     const newOrder = new orderModel({
+//       userId,
+//       items,
+//       address,
+//       amount: finalAmount,
+//       paymentMethod: "COD",
+//       payment: false,
+//       status: "Pending",
+//       date: Date.now(),
+//     });
+//     await newOrder.save();
+
+//     // Remove items from cart
+//     if (user.cartData) {
+//       let cartData = { ...user.cartData };
+//       items.forEach(item => {
+//         if (cartData[item._id]) delete cartData[item._id];
+//       });
+//       await userModel.findByIdAndUpdate(userId, { cartData });
+//     }
+
+//     // Send email
+//     if (user.email) {
+//       const emailHtml = `
+//         <h1>Order Confirmation</h1>
+//         <p>Hi ${user.name || "Customer"},</p>
+//         <p>Thank you for your order! Your order ID is <strong>${newOrder.orderId}</strong>.</p>
+//         <p>Total Amount: ₹${finalAmount} ${user.plusMember && amount > 999 ? "(Includes 4% Plus Member Discount)" : ""}</p>
+//         <p>Payment Method: COD</p>
+//         <p>We will notify you once your order is shipped.</p>
+//       `;
+//       await sendEmail({
+//         to: user.email,
+//         subject: `Order ${newOrder.orderId} Placed Successfully!`,
+//         html: emailHtml,
+//       });
+//     }
+
+//     res.json({ success: true, message: "Order placed successfully", orderId: newOrder._id, amount: finalAmount });
+//   } catch (error) {
+//     console.error("placeOrder error:", error);
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
 export const placeOrder = async (req, res) => {
   try {
     const userId = req.userId;
-    const { items, amount, address } = req.body;
+    const { items, address } = req.body; // ignore amount from frontend
 
     if (!items || !Array.isArray(items) || items.length === 0)
       return res.status(400).json({ success: false, message: "Invalid items array" });
@@ -24,13 +86,26 @@ export const placeOrder = async (req, res) => {
     const user = await userModel.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    // Apply Plus Member discount if applicable
-    let finalAmount = amount;
-    if (user.plusMember && amount > 999) finalAmount = parseFloat((amount * 0.96).toFixed(2));
+    const deliveryCharge = 50; // ensure delivery charge is defined
 
+    // ----------------- Compute subtotal -----------------
+    let subtotal = 0;
+    items.forEach(item => {
+      subtotal += item.amount * item.quantity;
+    });
+
+    // ----------------- Apply Plus Member discount -----------------
+    let finalAmount = subtotal;
+    let discountApplied = false;
+    if (user.plusMember && subtotal > 999) {
+      finalAmount = parseFloat((subtotal * 0.96).toFixed(2)); // 4% discount
+      discountApplied = true;
+    }
+
+    // ----------------- Add delivery charge -----------------
     finalAmount += deliveryCharge;
 
-    // Save order
+    // ----------------- Save order -----------------
     const newOrder = new orderModel({
       userId,
       items,
@@ -43,7 +118,7 @@ export const placeOrder = async (req, res) => {
     });
     await newOrder.save();
 
-    // Remove items from cart
+    // ----------------- Remove items from cart -----------------
     if (user.cartData) {
       let cartData = { ...user.cartData };
       items.forEach(item => {
@@ -52,13 +127,15 @@ export const placeOrder = async (req, res) => {
       await userModel.findByIdAndUpdate(userId, { cartData });
     }
 
-    // Send email
+    // ----------------- Send email -----------------
     if (user.email) {
       const emailHtml = `
         <h1>Order Confirmation</h1>
         <p>Hi ${user.name || "Customer"},</p>
-        <p>Thank you for your order! Your order ID is <strong>${newOrder.orderId}</strong>.</p>
-        <p>Total Amount: ₹${finalAmount} ${user.plusMember && amount > 999 ? "(Includes 4% Plus Member Discount)" : ""}</p>
+        <p>Thank you for your order! Your order ID is <strong>${newOrder.orderIdid}</strong>.</p>
+        <p>Total Amount: ₹${finalAmount.toFixed(2)} ${
+        discountApplied ? "(Includes 4% Plus Member Discount)" : ""
+      }</p>
         <p>Payment Method: COD</p>
         <p>We will notify you once your order is shipped.</p>
       `;
@@ -75,88 +152,6 @@ export const placeOrder = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-// export const placeOrderStripe = async (req, res) => {
-//   try {
-//     const userId = req.userId;
-//     const { items, amount, address } = req.body;
-//     const origin = req.headers.origin;
-
-//     if (!amount || typeof amount !== "number" || amount <= 0)
-//       return res.status(400).json({ success: false, message: "Invalid amount" });
-
-//     const user = await userModel.findById(userId);
-//     if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-//     // Apply Plus Member discount if applicable
-//     let finalAmount = amount;
-//     if (user.plusMember && amount > 999) finalAmount = parseFloat((amount * 0.96).toFixed(2));
-//     finalAmount += deliveryCharge;
-
-//     // Save order
-//     const newOrder = new orderModel({
-//       userId,
-//       items,
-//       address,
-//       amount: finalAmount,
-//       paymentMethod: "Stripe",
-//       payment: false,
-//       status: "Pending",
-//       date: Date.now(),
-//     });
-//     await newOrder.save();
-
-//     // Prepare Stripe line items
-//     const line_items = items.map(item => ({
-//       price_data: {
-//         currency,
-//         product_data: { name: item.name },
-//         unit_amount: Math.round(item.amount * 100),
-//       },
-//       quantity: item.quantity,
-//     }));
-
-//     // Add delivery charges
-//     if (deliveryCharge > 0) {
-//       line_items.push({
-//         price_data: {
-//           currency,
-//           product_data: { name: "Delivery Charges" },
-//           unit_amount: Math.round(deliveryCharge * 100),
-//         },
-//         quantity: 1,
-//       });
-//     }
-
-//     const session = await stripe.checkout.sessions.create({
-//   success_url: `${origin}/verify?success=true&orderId=${newOrder.orderId}`,
-//   cancel_url: `${origin}/verify?success=false&orderId=${newOrder.orderId}`,
-
-//       line_items,
-//       mode: "payment",
-//     });
-
-//     // Send email
-//     if (user.email) {
-//       const emailHtml = `
-//         <h1>Order Initiated</h1>
-//         <p>Hi ${user.name || "Customer"},</p>
-//         <p>Your order ID <strong>${newOrder.orderId}</strong> has been created.</p>
-//         <p>Total Amount: ₹${finalAmount} ${user.plusMember && amount > 999 ? "(Includes 4% Plus Member Discount)" : ""}</p>
-//         <p>Please complete your payment to confirm the order.</p>
-//       `;
-//       await sendEmail({
-//         to: user.email,
-//         subject: `Order ${newOrder.orderId} Created - Payment Pending`,
-//         html: emailHtml,
-//       });
-//     }
-
-//     res.json({ success: true, session_url: session.url, orderId: newOrder._id, amount: finalAmount });
-//   } catch (error) {
-//     console.error("placeOrderStripe error:", error);
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
 export const placeOrderStripe = async (req, res) => {
   try {
     const userId = req.userId;
@@ -169,17 +164,27 @@ export const placeOrderStripe = async (req, res) => {
     const user = await userModel.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    // ----------------- Calculate final amount including Plus Member discount -----------------
-    let finalAmount = amount;
-    if (user.plusMember && amount > 999) finalAmount = parseFloat((amount * 0.96).toFixed(2));
-    finalAmount += deliveryCharge;
+    // ----------------- Apply Plus Member discount per item -----------------
+    const finalItems = items.map(item => {
+      let discountedAmount = item.amount;
+      if (user.plusMember && amount > 999) {
+        discountedAmount = parseFloat((item.amount * 0.96).toFixed(2));
+      }
+      return { ...item, amount: discountedAmount };
+    });
 
-    // ----------------- Save order in DB -----------------
+    // ----------------- Calculate total including delivery -----------------
+    // const totalAmount = finalItems.reduce((sum, i) => sum + i.amount * i.quantity, 0) + deliveryCharge;
+    const totalAmount = Math.round(
+  (finalItems.reduce((sum, i) => sum + i.amount * i.quantity, 0) + deliveryCharge) * 100
+) / 100; 
+
+    // ----------------- Save order -----------------
     const newOrder = new orderModel({
       userId,
-      items,
+      items: finalItems,
       address,
-      amount: finalAmount,
+      amount: totalAmount,
       paymentMethod: "Stripe",
       payment: false,
       status: "Pending",
@@ -188,23 +193,14 @@ export const placeOrderStripe = async (req, res) => {
     await newOrder.save();
 
     // ----------------- Prepare Stripe line items -----------------
-    const line_items = items.map(item => {
-      let itemAmount = item.amount; // original price per unit
-
-      // Apply 4% Plus Member discount directly to each item
-      if (user.plusMember && amount > 999) {
-        itemAmount = parseFloat((itemAmount * 0.96).toFixed(2)); // <--- Change here
-      }
-
-      return {
-        price_data: {
-          currency,
-          product_data: { name: item.name },
-          unit_amount: Math.round(itemAmount * 100), // must be non-negative integer
-        },
-        quantity: item.quantity,
-      };
-    });
+    const line_items = finalItems.map(item => ({
+      price_data: {
+        currency,
+        product_data: { name: item.name },
+        unit_amount: Math.round(item.amount * 100),
+      },
+      quantity: item.quantity,
+    }));
 
     // Add delivery charges as a separate line item
     if (deliveryCharge > 0) {
@@ -232,7 +228,7 @@ export const placeOrderStripe = async (req, res) => {
         <h1>Order Initiated</h1>
         <p>Hi ${user.name || "Customer"},</p>
         <p>Your order ID <strong>${newOrder.orderId}</strong> has been created.</p>
-        <p>Total Amount: ₹${finalAmount} ${user.plusMember && amount > 999 ? "(Includes 4% Plus Member Discount)" : ""}</p>
+        <p>Total Amount: ₹${totalAmount} ${user.plusMember && amount > 999 ? "(Includes 4% Plus Member Discount)" : ""}</p>
         <p>Please complete your payment to confirm the order.</p>
       `;
       await sendEmail({
@@ -242,13 +238,110 @@ export const placeOrderStripe = async (req, res) => {
       });
     }
 
-    res.json({ success: true, session_url: session.url, orderId: newOrder._id, amount: finalAmount });
+    res.json({ success: true, session_url: session.url, orderId: newOrder.orderId, amount: totalAmount });
 
   } catch (error) {
     console.error("placeOrderStripe error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+
+// };
+// export const placeOrderStripe = async (req, res) => {
+//   try {
+//     const userId = req.userId;
+//     const { items, amount, address } = req.body;
+//     const origin = req.headers.origin;
+
+//     if (!amount || typeof amount !== "number" || amount <= 0)
+//       return res.status(400).json({ success: false, message: "Invalid amount" });
+
+//     const user = await userModel.findById(userId);
+//     if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+//     // ----------------- Calculate final amount including Plus Member discount -----------------
+//     let finalAmount = amount;
+//     if (user.plusMember && amount > 999) finalAmount = parseFloat((amount * 0.96).toFixed(2));
+//     finalAmount += deliveryCharge;
+
+//     // ----------------- Save order in DB -----------------
+//     const newOrder = new orderModel({
+//       userId,
+//       items,
+//       address,
+//       amount: finalAmount,
+//       paymentMethod: "Stripe",
+//       payment: false,
+//       status: "Pending",
+//       date: Date.now(),
+//     });
+//     await newOrder.save();
+
+//     // ----------------- Prepare Stripe line items -----------------
+//     const line_items = items.map(item => {
+//       let itemAmount = item.amount; // original price per unit
+
+//       // Apply 4% Plus Member discount directly to each item
+//       if (user.plusMember && amount > 999) {
+//         itemAmount = parseFloat((itemAmount * 0.96).toFixed(2)); // <--- Change here
+//       }
+
+//       return {
+//         price_data: {
+//           currency,
+//           product_data: { name: item.name },
+//           unit_amount: Math.round(itemAmount * 100), // must be non-negative integer
+//         },
+//         quantity: item.quantity,
+//       };
+//     });
+
+//     // Add delivery charges as a separate line item
+//     if (deliveryCharge > 0) {
+//       line_items.push({
+//         price_data: {
+//           currency,
+//           product_data: { name: "Delivery Charges" },
+//           unit_amount: Math.round(deliveryCharge * 100),
+//         },
+//         quantity: 1,
+//       });
+//     }
+
+//     // ----------------- Create Stripe checkout session -----------------
+//     const session = await stripe.checkout.sessions.create({
+//       success_url: `${origin}/verify?success=true&orderId=${newOrder.orderId}`,
+//       cancel_url: `${origin}/verify?success=false&orderId=${newOrder.orderId}`,
+//       line_items,
+//       mode: "payment",
+//     });
+
+//     // ----------------- Send order email -----------------
+//     if (user.email) {
+//       const emailHtml = `
+//         <h1>Order Initiated</h1>
+//         <p>Hi ${user.name || "Customer"},</p>
+//         <p>Your order ID <strong>${newOrder.orderId}</strong> has been created.</p>
+//         <p>Total Amount: ₹${finalAmount} ${user.plusMember && amount > 999 ? "(Includes 4% Plus Member Discount)" : ""}</p>
+//         <p>Please complete your payment to confirm the order.</p>
+//       `;
+//       await sendEmail({
+//         to: user.email,
+//         subject: `Order ${newOrder.orderId} Created - Payment Pending`,
+//         html: emailHtml,
+//       });
+//     }
+
+//     res.json({ success: true, session_url: session.url, orderId: newOrder._id, amount: finalAmount });
+
+//   } catch (error) {
+//     console.error("placeOrderStripe error:", error);
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
 
 
 
