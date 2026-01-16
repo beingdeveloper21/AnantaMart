@@ -1,125 +1,142 @@
-import React, { useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { ShopContext } from '../context/ShopContext';
-import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useContext } from "react";
+import axios from "axios";
+import { ShopContext } from "../context/ShopContext";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import { Mail, KeyRound, Lock } from "lucide-react";
 
-const Login = () => {
-  const [currentState, setCurrentState] = useState('Login');
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('');
-  const [userId, setUserId] = useState('');
-
-  const { token, setToken, backendUrl, fetchCartData } = useContext(ShopContext);
+const ForgotPassword = () => {
+  const { backendUrl } = useContext(ShopContext);
   const navigate = useNavigate();
 
-  const onSubmitHandler = async (event) => {
-    event.preventDefault();
+  const [step, setStep] = useState(1);
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
+  const sendOtp = async () => {
+    if (!email) return toast.error("Please enter your email");
     try {
-      let response;
-
-      if (currentState === 'Sign Up') {
-        response = await axios.post(`${backendUrl}/api/user/register`, {
-          name,
-          email,
-          password,
-        });
-      } else {
-        response = await axios.post(`${backendUrl}/api/user/login`, {
-          email,
-          password,
-        });
+      const res = await axios.post(`${backendUrl}/api/user/forgot-password/`, { email });
+      if (res.data.success) {
+        toast.success("OTP sent to your email!");
+        setStep(2);
       }
-
-      if (response.data.success) {
-        const receivedToken = response.data.token;
-        const receivedUserId = response.data.userId;
-
-        setToken(receivedToken);
-        setUserId(receivedUserId);
-        localStorage.setItem('token', receivedToken);
-        localStorage.setItem('userId', receivedUserId);
-
-        // ✅ Fetch cart data for logged in user
-        fetchCartData(receivedUserId,receivedToken);
-
-        // ✅ Navigate to homepage (or /cart if you prefer)
-        navigate('/');
-      } else {
-        toast.error(response.data.message);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.message);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
     }
   };
 
-  useEffect(() => {
-    if (token) {
-      navigate('/');
+  const verifyOtp = async () => {
+    if (!otp) return toast.error("Enter the OTP");
+    try {
+      const res = await axios.post(`${backendUrl}/api/user/forgot-password/verify-otp`, { email, otp });
+      if (res.data.success) {
+        toast.success("OTP verified!");
+        setStep(3);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
     }
-  }, [token]);
+  };
+
+  const resetPassword = async () => {
+    if (!newPassword) return toast.error("Enter new password");
+    try {
+      const res = await axios.post(`${backendUrl}/api/user/forgot-password/reset-password`, { email, otp, newPassword });
+      if (res.data.success) {
+        toast.success("Password reset successfully!");
+        navigate("/login");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message);
+    }
+  };
 
   return (
-    <form
-      onSubmit={onSubmitHandler}
-      className="flex flex-col items-center w-[90%] sm:max-w-96 m-auto mt-14 gap-4 text-gray-800"
-    >
-      <div className="inline-flex items-center gap-2 mb-2 mt-10">
-        <p className="prata-regular text-3xl">{currentState}</p>
-        <hr className="border-none h-[1.5px] w-8 bg-gray-800" />
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-100 to-blue-200 flex justify-center items-center px-4">
+      <div className="bg-white/40 backdrop-blur-2xl border border-white/60 shadow-2xl rounded-3xl w-full max-w-md p-8 transform hover:-translate-y-1 transition duration-300">
 
-      {currentState === 'Login' ? null : (
-        <input
-          onChange={(e) => setName(e.target.value)}
-          value={name}
-          required
-          type="text"
-          placeholder="Name"
-          className="w-full px-3 py-2 border border-gray-800"
-        />
-      )}
-      <input
-        onChange={(e) => setEmail(e.target.value)}
-        value={email}
-        required
-        type="email"
-        placeholder="E-mail"
-        className="w-full px-3 py-2 border border-gray-800"
-      />
-      <input
-        onChange={(e) => setPassword(e.target.value)}
-        value={password}
-        required
-        type="password"
-        placeholder="Password"
-        className="w-full px-3 py-2 border border-gray-800"
-      />
-      <div className="w-full flex justify-between text-sm mt-[-8px]">
-       <p
-    className="cursor-pointer text-blue-500"
-    onClick={() => navigate("/forgot-password")}
-  >
-    Forgot your password?
-  </p>
-        {currentState === 'Login' ? (
-          <p onClick={() => setCurrentState('Sign Up')} className="cursor-pointer">
-            Create Account
-          </p>
-        ) : (
-          <p onClick={() => setCurrentState('Login')} className="cursor-pointer">
-            Login Here
-          </p>
-        )}
-      </div>
+        <h1 className="text-3xl font-bold text-center text-blue-900 mb-2">
+          Reset Password
+        </h1>
+        <p className="text-center text-gray-700 mb-6 text-sm">
+          Securely update your account credentials
+        </p>
 
-      <button className="bg-black text-white font-light px-8 py-2 mt-4">
-        {currentState === 'Login' ? 'Sign-In' : 'Sign-Up'}
-      </button>
-    </form>
+        <h2 className="text-xl font-semibold text-center text-blue-900 mb-4">
+          {step === 1
+            ? "Enter your registered email"
+            : step === 2
+            ? "Enter OTP sent to your mail"
+            : "Create a new password"}
+        </h2>
+
+        <div className="space-y-5">
+          {step === 1 && (
+            <div className="relative">
+              <Mail className="absolute left-3 top-3 text-blue-600" size={20} />
+              <input
+                type="email"
+                className="input-field"
+                placeholder="Enter email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <button
+                onClick={sendOtp}
+                className="w-full mt-4 bg-blue-700 text-white py-3 rounded-xl font-semibold hover:bg-blue-800 active:scale-95 transition shadow-md"
+              >
+                Send OTP
+              </button>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="relative">
+              <KeyRound className="absolute left-3 top-3 text-blue-600" size={20} />
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Enter OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+              />
+              <button
+                onClick={verifyOtp}
+                className="w-full mt-4 bg-blue-700 text-white py-3 rounded-xl font-semibold hover:bg-blue-800 active:scale-95 transition shadow-md"
+              >
+                Verify OTP
+              </button>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="relative">
+              <Lock className="absolute left-3 top-3 text-blue-600" size={20} />
+              <input
+                type="password"
+                className="input-field"
+                placeholder="New Password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <button
+                onClick={resetPassword}
+                className="w-full mt-4 bg-blue-700 text-white py-3 rounded-xl font-semibold hover:bg-blue-800 active:scale-95 transition shadow-md"
+              >
+                Reset Password
+              </button>
+            </div>
+          )}
+
+          <p className="text-center text-sm text-blue-700 font-medium mt-4 cursor-pointer hover:underline" onClick={() => navigate("/login")}>
+            Back to Login
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };
 
-export default Login;
+export default ForgotPassword;
